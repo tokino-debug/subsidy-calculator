@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>見守りカメラ補助金 自動算出シート</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0f1e;--surface:#111827;--surface2:#1a2235;--border:#1e3a5f;--accent:#00d4ff;--accent2:#0066ff;--accent3:#00ff88;--warn:#ffc107;--danger:#ff5252;--text:#e8f4fd;--text-muted:#6b8cae;--care:#ff6b35;--medical:#00d4ff;--glow:0 0 20px rgba(0,212,255,0.3);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(0,100,255,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(0,212,255,.05) 0%,transparent 50%);pointer-events:none;z-index:0;}
+.container{max-width:880px;margin:0 auto;padding:40px 24px 80px;position:relative;z-index:1;}
+header{text-align:center;margin-bottom:48px;}
+.badge{display:inline-block;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,100,255,.15));border:1px solid rgba(0,212,255,.3);color:var(--accent);font-size:11px;letter-spacing:3px;padding:6px 16px;border-radius:20px;margin-bottom:16px;font-family:'Inter',sans-serif;font-weight:600;}
+h1{font-size:clamp(26px,5vw,38px);font-weight:900;line-height:1.2;background:linear-gradient(135deg,#fff 0%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+.subtitle{color:var(--text-muted);font-size:14px;font-weight:300;}
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:20px;transition:border-color .3s;}
+.step-card.active{border-color:rgba(0,212,255,.4);box-shadow:0 0 30px rgba(0,212,255,.08);}
+.step-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.step-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;}
+.step-label{font-size:16px;font-weight:700;}
+.genre-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.genre-btn{border:2px solid var(--border);background:var(--surface2);border-radius:14px;padding:24px 20px;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden;}
+.genre-btn::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s;}
+.genre-btn.care::before{background:radial-gradient(circle at center,rgba(255,107,53,.12),transparent 70%);}
+.genre-btn.medical::before{background:radial-gradient(circle at center,rgba(0,212,255,.12),transparent 70%);}
+.genre-btn:hover{transform:translateY(-2px);}
+.genre-btn:hover::before{opacity:1;}
+.genre-btn.selected.care{border-color:var(--care);box-shadow:0 0 24px rgba(255,107,53,.25);}
+.genre-btn.selected.care::before,.genre-btn.selected.medical::before{opacity:1;}
+.genre-btn.selected.medical{border-color:var(--medical);box-shadow:0 0 24px rgba(0,212,255,.25);}
+.genre-icon{font-size:40px;margin-bottom:12px;display:block;}
+.genre-name{font-size:18px;font-weight:700;margin-bottom:6px;}
+.genre-desc{font-size:12px;color:var(--text-muted);line-height:1.6;}
+.genre-btn.selected.care .genre-name{color:var(--care);}
+.genre-btn.selected.medical .genre-name{color:var(--medical);}
+.pref-search{position:relative;margin-bottom:16px;}
+.pref-search input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px 14px 44px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.pref-search input:focus{border-color:var(--accent);}
+.pref-search input::placeholder{color:var(--text-muted);}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:16px;}
+.region-group{margin-bottom:20px;}
+.region-label{font-size:11px;letter-spacing:2px;color:var(--text-muted);font-family:'Inter',sans-serif;font-weight:600;margin-bottom:10px;padding-left:4px;}
+.pref-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.pref-tag{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;transition:all .2s;color:var(--text-muted);font-weight:500;}
+.pref-tag:hover{border-color:var(--accent);color:var(--text);}
+.pref-tag.selected{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,100,255,.15));border-color:var(--accent);color:var(--accent);font-weight:700;}
+.pref-tag.hidden{display:none;}
+.input-group{margin-bottom:20px;}
+.input-label{font-size:13px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.input-label .unit{font-size:11px;background:rgba(0,212,255,.1);color:var(--accent);padding:2px 8px;border-radius:4px;}
+.input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:16px;font-weight:500;outline:none;transition:border-color .2s;-moz-appearance:textfield;}
+.input-field::-webkit-outer-spin-button,.input-field::-webkit-inner-spin-button{-webkit-appearance:none;}
+.input-field:focus{border-color:var(--accent);box-shadow:var(--glow);}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.checkbox-group{display:flex;flex-direction:column;gap:10px;}
+.checkbox-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;}
+.checkbox-item:hover{border-color:rgba(0,212,255,.3);}
+.checkbox-item.checked{border-color:var(--accent3);background:rgba(0,255,136,.05);}
+.checkbox-item input{display:none;}
+.checkbox-custom{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.checkbox-item.checked .checkbox-custom{background:var(--accent3);border-color:var(--accent3);}
+.checkbox-check{color:#000;font-size:13px;display:none;font-weight:700;}
+.checkbox-item.checked .checkbox-check{display:block;}
+.checkbox-text{flex:1;}
+.checkbox-title{font-size:14px;font-weight:500;margin-bottom:2px;}
+.checkbox-sub{font-size:12px;color:var(--text-muted);}
+.calc-btn{width:100%;padding:18px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:14px;color:#fff;font-family:'Noto Sans JP',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .25s;letter-spacing:1px;margin-top:8px;}
+.calc-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,100,255,.4);}
+.calc-btn:disabled{opacity:.4;cursor:not-allowed;}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:32px 0;}
+#result-section{display:none;animation:fadeIn .5s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.result-header{text-align:center;padding:32px;background:var(--surface);border:1px solid rgba(0,255,136,.3);border-radius:16px;margin-bottom:16px;position:relative;overflow:hidden;}
+.result-header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(0,255,136,.08),transparent 60%);}
+.result-tag{display:inline-block;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:var(--accent3);font-size:11px;letter-spacing:2px;padding:5px 14px;border-radius:20px;margin-bottom:16px;font-family:'Inter',sans-serif;font-weight:600;}
+.result-pref{font-size:13px;color:var(--text-muted);margin-bottom:6px;}
+.result-amount{font-size:clamp(36px,8vw,60px);font-weight:900;font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--accent3),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin:12px 0 8px;position:relative;z-index:1;}
+.result-amount-label{font-size:14px;color:var(--text-muted);position:relative;z-index:1;}
+.cond-badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:6px;margin:2px 4px;font-weight:600;}
+.cond-special{background:rgba(255,200,0,.15);color:#ffc800;border:1px solid rgba(255,200,0,.3);}
+.subsidy-name-card{background:linear-gradient(135deg,rgba(0,100,255,.1),rgba(0,212,255,.07));border:1px solid rgba(0,212,255,.3);border-radius:14px;padding:22px 24px;margin-bottom:16px;}
+.subsidy-name-label{font-size:11px;letter-spacing:2px;color:var(--accent);font-family:'Inter',sans-serif;font-weight:600;margin-bottom:8px;}
+.subsidy-name-title{font-size:17px;font-weight:700;line-height:1.5;margin-bottom:6px;}
+.subsidy-name-based{font-size:12px;color:var(--text-muted);}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.detail-card-label{font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-bottom:8px;font-family:'Inter',sans-serif;}
+.detail-card-value{font-size:19px;font-weight:700;font-family:'Inter',sans-serif;color:var(--accent);}
+.detail-card-sub{font-size:11px;color:var(--text-muted);margin-top:4px;}
+/* Timeline */
+.timeline-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px;}
+.timeline-title{font-size:13px;font-weight:700;color:var(--warn);margin-bottom:20px;}
+.tl-item{display:flex;gap:16px;position:relative;}
+.tl-item:not(:last-child)::after{content:'';position:absolute;left:15px;top:34px;bottom:0;width:2px;background:linear-gradient(to bottom,var(--border),transparent);z-index:0;}
+.tl-dot{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;font-family:'Inter',sans-serif;z-index:1;margin-top:2px;}
+.tl-dot.p-open{background:rgba(0,212,255,.2);border:2px solid var(--accent);color:var(--accent);}
+.tl-dot.p-entry{background:rgba(255,193,7,.2);border:2px solid var(--warn);color:var(--warn);}
+.tl-dot.p-apply{background:rgba(0,255,136,.2);border:2px solid var(--accent3);color:var(--accent3);}
+.tl-dot.p-decide{background:rgba(136,136,255,.2);border:2px solid #8888ff;color:#8888ff;}
+.tl-dot.p-execute{background:rgba(255,107,53,.2);border:2px solid var(--care);color:var(--care);}
+.tl-dot.p-report{background:rgba(150,150,150,.2);border:2px solid #888;color:#aaa;}
+.tl-body{padding-bottom:20px;flex:1;}
+.tl-date{font-size:12px;font-weight:700;color:var(--warn);font-family:'Inter',sans-serif;margin-bottom:3px;}
+.tl-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.tl-desc{font-size:12px;color:var(--text-muted);line-height:1.6;}
+.tl-urgent{display:inline-block;font-size:10px;background:rgba(255,82,82,.2);color:#ff7070;border:1px solid rgba(255,82,82,.3);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;}
+/* Info */
+.info-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:14px;}
+.info-section.cond{border-left:3px solid var(--accent3);}
+.info-section.items{border-left:3px solid var(--accent);}
+.info-section-title{font-size:13px;font-weight:700;margin-bottom:12px;}
+.info-section-body{font-size:13px;color:var(--text-muted);line-height:1.7;}
+.info-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.info-list li{font-size:13px;color:var(--text-muted);line-height:1.6;padding-left:18px;position:relative;}
+.info-list li::before{content:'▸';position:absolute;left:0;color:var(--accent3);font-size:11px;top:2px;}
+.tag-req{display:inline-block;font-size:10px;background:rgba(255,82,82,.15);color:#ff8080;border:1px solid rgba(255,82,82,.3);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle;}
+.tag-opt{display:inline-block;font-size:10px;background:rgba(0,255,136,.12);color:var(--accent3);border:1px solid rgba(0,255,136,.3);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle;}
+.notes-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:20px 24px;margin-bottom:16px;}
+.notes-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;}
+.notes-list{list-style:none;}
+.notes-list li{font-size:13px;color:var(--text-muted);line-height:1.7;padding-left:16px;position:relative;}
+.notes-list li::before{content:'›';position:absolute;left:0;color:var(--accent);font-weight:700;}
+.notes-window{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--accent);font-weight:500;}
+.site-link-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:11px 20px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,100,255,.15));border:1px solid rgba(0,212,255,.45);border-radius:10px;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s;}
+.site-link-btn:hover{background:linear-gradient(135deg,rgba(0,212,255,.25),rgba(0,100,255,.25));box-shadow:0 0 16px rgba(0,212,255,.25);transform:translateY(-1px);}
+.site-link-none{margin-top:10px;font-size:12px;color:var(--text-muted);font-style:italic;}
+.alert-card{background:rgba(255,107,53,.07);border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:16px 20px;margin-bottom:16px;font-size:13px;color:rgba(255,107,53,.9);line-height:1.7;display:flex;gap:10px;}
+.reset-btn{width:100%;padding:14px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--text-muted);font-family:'Noto Sans JP',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;margin-top:8px;}
+.reset-btn:hover{border-color:var(--accent);color:var(--text);}
+@media(max-width:600px){.genre-grid{grid-template-columns:1fr 1fr;}.input-row{grid-template-columns:1fr;}.detail-grid{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <div class="badge">SUBSIDY CALCULATOR 2025</div>
+  <h1>見守りカメラ補助金<br>自動算出シート</h1>
+  <p class="subtitle">都道府県・施設種別を選択 → 補助金額・名称・申請フロー・期限を自動表示</p>
+</header>
+
+<div class="step-card active" id="step1">
+  <div class="step-header"><div class="step-num">1</div><div class="step-label">施設・機関の種別を選択</div></div>
+  <div class="genre-grid">
+    <div class="genre-btn care" id="btn-care" onclick="selectGenre('care')">
+      <span class="genre-icon">🏥</span><div class="genre-name">介護施設</div>
+      <div class="genre-desc">介護老人福祉施設・老健・グループホーム等の介護事業所</div>
+    </div>
+    <div class="genre-btn medical" id="btn-medical" onclick="selectGenre('medical')">
+      <span class="genre-icon">🏨</span><div class="genre-name">病院・有床診療所</div>
+      <div class="genre-desc">ベースアップ評価料届出済の病院・有床診療所</div>
+    </div>
+  </div>
+</div>
+
+<div class="step-card" id="step2">
+  <div class="step-header"><div class="step-num">2</div><div class="step-label">都道府県を選択</div></div>
+  <div class="pref-search">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="pref-search" placeholder="都道府県名で検索..." oninput="filterPref(this.value)">
+  </div>
+  <div id="pref-list"></div>
+</div>
+
+<div class="step-card" id="step3">
+  <div class="step-header"><div class="step-num">3</div><div class="step-label">導入内容・施設情報を入力</div></div>
+  <div id="care-inputs" style="display:none">
+    <div class="input-row">
+      <div class="input-group">
+        <div class="input-label">見守り機器の導入台数 <span class="unit">台</span></div>
+        <input type="number" class="input-field" id="camera-count" placeholder="例: 10" min="1">
+      </div>
+      <div class="input-group">
+        <div class="input-label">1台あたりの機器費用 <span class="unit">万円</span></div>
+        <input type="number" class="input-field" id="unit-price" placeholder="例: 20" min="1">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">3点セット導入予定（補助率引き上げ対象）</div>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-3set" onchange="toggleCheck(this)">
+          <div class="checkbox-custom"><span class="checkbox-check">✓</span></div>
+          <div class="checkbox-text">
+            <div class="checkbox-title">見守りセンサー ＋ インカム ＋ 介護ソフトを同時導入</div>
+            <div class="checkbox-sub">3点セット導入で補助率が 3/4 に引き上げられる場合があります</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div id="medical-inputs" style="display:none">
+    <div class="input-row">
+      <div class="input-group">
+        <div class="input-label">許可病床数 <span class="unit">床</span></div>
+        <input type="number" class="input-field" id="bed-count" placeholder="例: 200" min="1">
+      </div>
+      <div class="input-group">
+        <div class="input-label">導入予定の総費用 <span class="unit">万円</span></div>
+        <input type="number" class="input-field" id="medical-cost" placeholder="例: 500" min="1">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">令和6年度「ベースアップ評価料」の届出状況</div>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-baseup" onchange="toggleCheck(this)">
+          <div class="checkbox-custom"><span class="checkbox-check">✓</span></div>
+          <div class="checkbox-text">
+            <div class="checkbox-title">2024年4月1日時点でベースアップ評価料を届け出ている</div>
+            <div class="checkbox-sub">この届出が補助金申請の前提条件となります</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="calc-btn" id="calc-btn" onclick="calculate()" disabled>🧮 補助金額・申請フロー・期限を自動算出する</button>
+<div class="sep"></div>
+<div id="result-section">
+  <div id="result-content"></div>
+  <button class="reset-btn" onclick="resetAll()">↩ 最初からやり直す</button>
+</div>
+</div>
+
+<script>
+const prefRegions={
+  "北海道・東北":["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県"],
+  "関東":["茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県"],
+  "中部":["新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県"],
+  "近畿":["三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県"],
+  "中国":["鳥取県","島根県","岡山県","広島県","山口県"],
+  "四国":["徳島県","香川県","愛媛県","高知県"],
+  "九州・沖縄":["福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"]
+};
+
+// 標準フロー生成
+function stdFlow(openDate,closeDate,decideDate,execDate,reportDate,openDesc){
+  return [
+    {p:"open",date:openDate,label:"公募開始",desc:openDesc||"都道府県ウェブサイトで公募要領・申請様式を公開。"},
+    {p:"apply",date:closeDate,label:"申請書類提出締切",desc:"交付申請書・事業計画書・見積書等を提出。",urgent:true},
+    {p:"decide",date:decideDate,label:"交付決定通知",desc:"採択結果を書面で通知。決定後に機器発注・購入が可能。"},
+    {p:"execute",date:execDate,label:"機器導入・支払完了",desc:"機器納品・検収・業者への支払を完了。"},
+    {p:"report",date:reportDate,label:"実績報告・補助金振込",desc:"領収書・納品書等を添付して実績報告書を提出。補助金は後払い（精算払い）。"}
+  ];
+}
+
+const stdCond=[
+  {t:"介護保険法に基づく指定を受けた事業所であること",r:true},
+  {t:"補助率・上限は公募要領で確認",r:false},
+  {t:"3点セット（見守りセンサー・インカム・介護ソフト）同時導入で補助率引き上げの場合あり",r:false},
+  {t:"導入後3年間の効果報告書提出義務",r:true},
+  {t:"補助金は精算払い（後払い）のため一時立替が必要",r:false},
+  {t:"交付決定前の機器発注・購入は不可",r:true}
+];
+
+const careDB={
+  "北海道":{name:"介護テクノロジー導入支援事業補助金（北海道）",rate:4/5,cap:null,unitCap:30,special:"要事前登録",
+    flow:[
+      {p:"entry",date:"10月上旬",label:"事前登録（必須）",desc:"専用フォームから法人情報・導入予定機器を登録。未登録は申請不可。",urgent:true},
+      {p:"open",date:"10月中旬",label:"公募開始",desc:"事前登録者に案内メール送付。公募要領・様式を公開。"},
+      {p:"apply",date:"11月中旬",label:"申請書類提出締切",desc:"交付申請書・見積書・事業計画書を郵送または窓口提出。",urgent:true},
+      {p:"decide",date:"12月〜翌1月",label:"交付決定通知",desc:"採択結果を書面で通知。決定後に機器発注可。"},
+      {p:"execute",date:"翌年2月末",label:"機器導入・支払完了"},
+      {p:"report",date:"翌年3月末",label:"実績報告・補助金振込",desc:"補助金は後払い（精算払い）。"}
+    ],
+    cond:[{t:"北海道内の介護保険指定事業所",r:true},{t:"事前登録が必須（未登録は申請不可）",r:true},{t:"交付決定前の機器購入不可",r:true},{t:"導入後3年間の効果報告義務",r:true}],
+    note:"10月〜11月公募。事前登録が必須の独自制度。",url:"https://www.pref.hokkaido.lg.jp/hf/khf/index.html"},
+  "青森県":{name:"介護テクノロジー定着支援事業補助金（青森県）",rate:4/5,cap:1000,unitCap:30,
+    flow:stdFlow("6月上旬","7月末","8〜9月","翌年1月末","翌年2月末"),cond:stdCond,
+    note:"補助率4/5（上限1,000万円）。標準的スケジュールで実施。",url:"https://www.pref.aomori.lg.jp/soshiki/kenko/kaigo/"},
+  "岩手県":{name:"介護ロボット・ICT導入支援事業補助金（岩手県）",rate:3/4,cap:1000,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"補助率3/4（上限1,000万円）。",url:"https://www.pref.iwate.jp/kurashikankyou/kaigo/jigyousya/index.html"},
+  "宮城県":{name:"介護テクノロジー導入支援事業費補助金（宮城県）",rate:3/4,cap:null,unitCap:30,special:"公募期間限定（7〜8月）",
+    flow:stdFlow("7月上旬","8月末","10月","翌年1月","翌年2月","年1回の限定公募。公募期間外の申請不可。"),
+    cond:[{t:"宮城県内の介護保険指定事業所",r:true},{t:"7月〜8月の限定公募期間内に申請必須",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"7〜8月の限定公募。期間外申請不可。",url:"https://www.pref.miyagi.jp/soshiki/kaigo/"},
+  "秋田県":{name:"介護テクノロジー等導入支援事業補助金（秋田県）",rate:3/4,cap:400,unitCap:30,special:"1法人5施設まで",
+    flow:stdFlow("6月","7月末","9月","翌年1月","翌年2月","1法人5施設までの制限に注意。"),
+    cond:[{t:"秋田県内の介護保険指定事業所",r:true},{t:"1法人あたり5施設まで申請可",r:true},{t:"上限400万円（1法人5施設合算）",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"補助率3/4（上限400万円／1法人5施設）。台数制限あり。",url:"https://www.pref.akita.lg.jp/pages/dir000877"},
+  "山形県":{name:"介護テクノロジー導入支援事業費補助金（山形県）",rate:4/5,cap:1000,unitCap:30,special:"パッケージ型",
+    flow:stdFlow("7月上旬","7月末","9月","翌年1月","翌年2月","パッケージ型（3点セット同時導入）で上限1,000万円。"),
+    cond:[{t:"山形県内の介護保険指定事業所",r:true},{t:"パッケージ型での申請で上限1,000万円",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"7月公募。パッケージ型上限1,000万円。",url:"https://www.pref.yamagata.jp/ou/imu/120030/index.html"},
+  "福島県":{name:"介護テクノロジー等導入支援事業費補助金（福島県）",rate:3/4,cap:900,unitCap:30,special:"パッケージ型",
+    flow:stdFlow("6月","7月末","9月","翌年1月","翌年2月","パッケージ型（複数テクノロジー同時導入）で上限900万円。"),
+    cond:[{t:"福島県内の介護保険指定事業所",r:true},{t:"パッケージ型上限900万円",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"パッケージ型上限900万円。",url:"https://www.pref.fukushima.lg.jp/site/longterm-care/"},
+  "茨城県":{name:"介護テクノロジー定着支援事業費補助金（茨城県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("5〜6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.ibaraki.jp/hokenfukushi/choju/kaigo/jigyosha/index.html"},
+  "栃木県":{name:"介護テクノロジー導入支援事業費補助金（栃木県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.tochigi.lg.jp/e05/welfare/kaigo/jigyousya/index.html"},
+  "群馬県":{name:"介護テクノロジー定着支援事業費補助金（群馬県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.gunma.jp/page/4658.html"},
+  "埼玉県":{name:"介護テクノロジー定着支援事業補助金（埼玉県）",rate:4/5,cap:750,unitCap:30,
+    flow:[
+      {p:"open",date:"5月上旬",label:"公募開始・業務改善計画作成開始",desc:"介護生産性向上総合相談センターへ相談のうえ業務改善計画を策定（必須）。"},
+      {p:"entry",date:"〜6月末",label:"SECURITY ACTION宣言の完了",desc:"IPA（情報処理推進機構）の★一つ星以上を申請前に宣言すること。",urgent:true},
+      {p:"apply",date:"6月末",label:"申請書類提出締切",desc:"業務改善計画・SECURITY ACTION証明等を添付。",urgent:true},
+      {p:"decide",date:"8月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了・業務改善研修受講"},
+      {p:"report",date:"翌年2月〜3年間",label:"実績報告（3年間継続）",desc:"翌年度から3年間、毎年効果報告書を提出。"}
+    ],
+    cond:[{t:"埼玉県内の介護保険指定事業所",r:true},{t:"業務改善計画の事前作成（相談センター利用必須）",r:true},{t:"SECURITY ACTION ★一つ星以上の宣言",r:true},{t:"業務改善支援研修の受講",r:true},{t:"導入後3年間の効果報告",r:true},{t:"パッケージ型上限750万円・通常型上限500万円",r:false}],
+    note:"SECURITY ACTION宣言と業務改善計画提出が必須。パッケージ型上限750万円。",url:"https://www.pref.saitama.lg.jp/a0609/kaigo-jigyousyo.html"},
+  "千葉県":{name:"介護テクノロジー定着支援事業費補助金（千葉県）",rate:4/5,cap:1000,unitCap:30,
+    flow:stdFlow("5月","6月末","8月","翌年1月","翌年2月","介護ソフトとロボットのパッケージ型導入を推奨。"),
+    cond:[{t:"千葉県内の介護保険指定事業所",r:true},{t:"パッケージ型で上限1,000万円",r:false},{t:"介護ソフトは記録・情報共有・請求を一気通貫で行えるもの",r:true},{t:"ケアプランデータ連携システム活用で5万円加算",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"パッケージ型上限1,000万円。ケアプランデータ連携で加算あり。",url:"https://www.pref.chiba.lg.jp/kaigokanri/"},
+  "東京都":{name:"介護テクノロジー導入支援事業補助金（東京都）",rate:4/5,cap:210,unitCap:30,
+    flow:stdFlow("4〜5月","6月末","8〜9月","翌年1月","翌年2月"),cond:[{t:"東京都内の介護保険指定事業所",r:true},{t:"1事業所あたり上限210万円",r:false},{t:"補助率4/5",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"補助率4/5（1事業所上限210万円）。",url:"https://www.fukushihoken.metro.tokyo.lg.jp/kourei/kaigo/jigyousha/index.html"},
+  "神奈川県":{name:"介護テクノロジー等導入支援補助金（神奈川県）",rate:null,cap:100,unitCap:30,special:"上限固定・2月末まで公募",
+    flow:[
+      {p:"open",date:"10月",label:"公募開始（上限100万円固定制）",desc:"補助率ではなく費用の多寡にかかわらず上限100万円の固定制。"},
+      {p:"apply",date:"翌年2月末",label:"申請締切（2月末）",desc:"他県と比べて公募期間が長い（年度末まで）。",urgent:true},
+      {p:"decide",date:"翌年3月",label:"交付決定"},
+      {p:"execute",date:"翌年度中",label:"機器導入・支払完了"},
+      {p:"report",date:"翌年度末",label:"実績報告"}
+    ],
+    cond:[{t:"神奈川県内の介護保険指定事業所",r:true},{t:"費用にかかわらず補助上限100万円（固定）",r:false},{t:"2月末までに申請",r:true}],
+    note:"上限100万円の固定補助。2月まで申請受付（他県より公募期間が長い）。",url:"https://www.pref.kanagawa.jp/div/1108/"},
+  "新潟県":{name:"介護テクノロジー定着支援事業費補助金（新潟県）",rate:[1/2,4/5],cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月","補助率1/2〜4/5。導入計画・業務改善計画の充実度で変動。"),
+    cond:[{t:"新潟県内の介護保険指定事業所",r:true},{t:"計画の充実度により補助率が1/2〜4/5に変動",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"補助率1/2〜4/5（計画の質による変動制）。",url:"https://www.pref.niigata.lg.jp/sec/kaigofukushi/"},
+  "富山県":{name:"介護テクノロジー導入支援事業補助金（富山県）",rate:3/4,cap:null,unitCap:30,special:"公募期間限定（7〜8月）",
+    flow:stdFlow("7月","8月末","10月","翌年1月","翌年2月","年1回の限定公募。公募期間外の申請不可。"),
+    cond:[{t:"富山県内の介護保険指定事業所",r:true},{t:"7〜8月の公募期間内に申請必須",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"7〜8月の限定公募。期間外申請不可。",url:"https://www.pref.toyama.jp/sections/1205/"},
+  "石川県":{name:"介護テクノロジー等導入支援事業補助金（石川県）",rate:3/4,cap:null,unitCap:30,special:"公募期間限定（10〜11月）",
+    flow:stdFlow("10月","11月中旬","12月〜翌1月","翌年3月","翌年3月末","年1回の限定公募（秋）。"),
+    cond:[{t:"石川県内の介護保険指定事業所",r:true},{t:"10〜11月の公募期間内に申請必須",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"10〜11月の限定公募（秋）。",url:"https://www.pref.ishikawa.lg.jp/chofuku/kaigo/"},
+  "福井県":{name:"介護テクノロジー等導入支援補助金（福井県）",rate:3/4,cap:null,unitCap:30,special:"9月30日締切",
+    flow:stdFlow("8月","9月30日","11月","翌年2月","翌年3月","9月30日が申請締切（厳守）。"),
+    cond:[{t:"福井県内の介護保険指定事業所",r:true},{t:"9月30日までの申請必須（厳守）",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"9月30日が申請締切（厳守）。他県より締切が早い。",url:"https://www.pref.fukui.lg.jp/doc/kourei/kaigo-hoken/"},
+  "山梨県":{name:"介護テクノロジー定着支援事業費補助金（山梨県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.yamanashi.jp/chojufukushi/"},
+  "長野県":{name:"介護テクノロジー等定着支援事業費補助金（長野県）",rate:4/5,cap:null,unitCap:30,special:"年度確認要",
+    flow:[
+      {p:"open",date:"年度により異なる",label:"公募開始（年度確認必須）",desc:"募集終了の年度があるため、公式サイトで当年度の公募状況を必ず確認すること。",urgent:true},
+      {p:"apply",date:"公募後1〜2ヶ月",label:"申請締切"},
+      {p:"decide",date:"採択後1〜2ヶ月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了"},
+      {p:"report",date:"翌年2月",label:"実績報告"}
+    ],
+    cond:[{t:"長野県内の介護保険指定事業所",r:true},{t:"当年度の公募状況を事前確認（必須）",r:true},{t:"補助率4/5",r:false}],
+    note:"募集終了の年度あり。必ず公式サイトで当年度の公募状況を確認。",url:"https://www.pref.nagano.lg.jp/kaigoshien/"},
+  "岐阜県":{name:"介護テクノロジー定着支援事業費補助金（岐阜県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.gifu.lg.jp/page/5814.html"},
+  "静岡県":{name:"介護テクノロジー定着支援事業費補助金（静岡県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.shizuoka.jp/kenko/kf-130/"},
+  "愛知県":{name:"介護テクノロジー等導入支援補助金（愛知県・市町村連携型）",rate:null,cap:null,unitCap:30,special:"防犯カメラ併用不可",
+    flow:[
+      {p:"entry",date:"随時（市町村による）",label:"市町村への事前相談（必須）",desc:"愛知県は市町村連携型。まず各市町村の担当窓口へ相談。",urgent:true},
+      {p:"open",date:"市町村により異なる",label:"市町村経由で申請受付",desc:"見守り専用カメラのみ対象。防犯カメラ兼用不可。"},
+      {p:"decide",date:"市町村による",label:"交付決定"},
+      {p:"execute",date:"市町村による",label:"事業完了"},
+      {p:"report",date:"市町村による",label:"実績報告"}
+    ],
+    cond:[{t:"愛知県内各市町村の介護保険指定事業所",r:true},{t:"見守り専用カメラのみ対象（防犯カメラ兼用不可）",r:true},{t:"申請・スケジュールは各市町村窓口に問い合わせ",r:true}],
+    note:"市町村連携型。防犯カメラ兼用機器は対象外。各市町村窓口に事前相談が必要。",url:"https://www.pref.aichi.jp/soshiki/kaigo-s/"},
+  "三重県":{name:"介護テクノロジー定着支援事業費補助金（三重県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("令和7〜8年度継続","公募後1〜2ヶ月","採択後1〜2ヶ月","翌年1月","翌年2月","令和7〜8年度にわたり継続実施。"),
+    cond:stdCond,note:"令和7〜8年度継続実施。",url:"https://www.pref.mie.lg.jp/CHOJUS/HP/index.htm"},
+  "滋賀県":{name:"介護テクノロジー等定着支援事業補助金（滋賀県）",rate:4/5,cap:null,unitCap:30,special:"事業提案制",
+    flow:[
+      {p:"entry",date:"6月13日まで",label:"事業提案書の提出（6月13日締切）",desc:"通常の申請書類より先に「事業提案書」を提出。採否確認後に正式申請。",urgent:true},
+      {p:"apply",date:"採択後",label:"正式申請書類提出"},
+      {p:"decide",date:"8月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了"},
+      {p:"report",date:"翌年2月",label:"実績報告"}
+    ],
+    cond:[{t:"滋賀県内の介護保険指定事業所",r:true},{t:"6月13日までに事業提案書の提出が必須",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"事業提案制（6月13日締切）。事前提案書の提出が必要。",url:"https://www.pref.shiga.lg.jp/ippan/kenkouiryouhukushi/kaigo/"},
+  "京都府":{name:"介護テクノロジー等定着支援事業補助金（京都府）",rate:3/4,cap:5000,unitCap:100,
+    flow:[
+      {p:"entry",date:"8月中旬",label:"事前協議書の提出（8月中旬締切）",desc:"補助金申請前に「事前協議書」を提出し採択可否を確認。",urgent:true},
+      {p:"apply",date:"事前協議採択後",label:"正式申請書類提出"},
+      {p:"decide",date:"10月以降",label:"交付決定",desc:"「事前着手届」提出で4月1日以降の着手が可能。"},
+      {p:"execute",date:"翌年12月",label:"事業完了"},
+      {p:"report",date:"翌年1月末",label:"実績報告（3年間継続）",desc:"導入後3箇年度にわたり毎年度の目標・効果報告書を提出。"}
+    ],
+    cond:[{t:"京都府内の介護サービス事業所・養護老人ホーム・軽費老人ホーム",r:true},{t:"「きょうと福祉人材育成認証制度」に参画（宣言事業者以上）",r:true},{t:"TAIS（福祉用具情報システム）登録機器であること",r:true},{t:"見守り機器1台上限100万円（重点分野）・一般機器1台30万円",r:false},{t:"施設全体上限5,000万円（定員30名以上の広域型施設）",r:false},{t:"パッケージ型導入は1,000万円上限",r:false},{t:"導入後3年間の効果報告義務",r:true}],
+    note:"事前協議書は8月中旬締切。「きょうと福祉人材育成認証制度」参画が必須要件。",url:"https://www.pref.kyoto.jp/kaigohoken/index.html"},
+  "大阪府":{name:"介護テクノロジー導入支援事業補助金（大阪府）",rate:3/4,cap:1000,unitCap:100,special:"要事前エントリー・抽選制",
+    flow:[
+      {p:"entry",date:"6月上旬〜8月末",label:"事前エントリー受付（必須）",desc:"予算超過時は抽選。「介護テクノロジー活用支援セミナー」受講（アーカイブ可）がエントリーの前提条件。",urgent:true},
+      {p:"entry",date:"9月",label:"抽選（予算超過時）",desc:"「働きやすい職場環境伴走支援プログラム」参加事業所は優先採択。"},
+      {p:"apply",date:"採択後",label:"正式申請書類提出"},
+      {p:"decide",date:"10〜11月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了",desc:"居宅系事業所は令和7年度中にケアプランデータ連携システムの利用開始が必須。"},
+      {p:"report",date:"翌年2月",label:"実績報告"}
+    ],
+    cond:[{t:"大阪府内の介護保険指定事業所",r:true},{t:"「介護テクノロジー活用支援セミナー」の受講（アーカイブ視聴可）",r:true},{t:"事前エントリーが必須（未エントリーは申請不可）",r:true},{t:"居宅系事業所はケアプランデータ連携の利用開始が必須",r:true},{t:"1事業所上限1,000万円（補助率3/4）",r:false},{t:"業務改善支援費（コンサルタント等）最大45万円補助",r:false}],
+    note:"事前エントリー制・抽選制。セミナー受講が前提条件。ケアプランデータ連携必須（居宅系）。",url:"https://www.pref.osaka.lg.jp/kaigoshien/"},
+  "兵庫県":{name:"介護テクノロジー等定着支援事業費補助金（兵庫県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://web.pref.hyogo.lg.jp/kf13/"},
+  "奈良県":{name:"介護テクノロジー等定着支援事業費補助金（奈良県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.nara.jp/dd_aspx_menuid-3765.htm"},
+  "和歌山県":{name:"介護テクノロジー定着支援事業費補助金（和歌山県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.wakayama.lg.jp/prefg/040400/kaigo/"},
+  "鳥取県":{name:"介護テクノロジー等定着支援事業費補助金（鳥取県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.tottori.lg.jp/kaigohoken/"},
+  "島根県":{name:"介護テクノロジー定着支援事業費補助金（島根県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.shimane.lg.jp/medical/fukushi/kaigo/"},
+  "岡山県":{name:"介護テクノロジー等定着支援事業費補助金（岡山県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.okayama.jp/page/detail-105440.html"},
+  "広島県":{name:"介護テクノロジー等定着支援事業費補助金（広島県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.hiroshima.lg.jp/soshiki/56/"},
+  "山口県":{name:"介護テクノロジー等定着支援事業費補助金（山口県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.yamaguchi.lg.jp/cms/a12600/"},
+  "徳島県":{name:"介護テクノロジー等定着支援事業費補助金（徳島県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.tokushima.lg.jp/jigyoshya/kaigofukushi/"},
+  "香川県":{name:"介護テクノロジー等定着支援事業費補助金（香川県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.kagawa.lg.jp/kenko_fukushi/kaigo/jigyosya/"},
+  "愛媛県":{name:"介護テクノロジー等定着支援事業費補助金（愛媛県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.ehime.jp/h20130/kaigo_hoken/index.html"},
+  "高知県":{name:"介護テクノロジー等定着支援事業費補助金（高知県）",rate:4/5,cap:null,unitCap:30,special:"提案募集型",
+    flow:[
+      {p:"entry",date:"5〜6月",label:"提案書の提出（提案募集型）",desc:"介護分は別途公募。提案書を事前提出して選考。",urgent:true},
+      {p:"apply",date:"採択後",label:"正式申請書類提出"},
+      {p:"decide",date:"8月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了"},
+      {p:"report",date:"翌年2月",label:"実績報告"}
+    ],
+    cond:[{t:"高知県内の介護保険指定事業所",r:true},{t:"提案募集型のため事前提案書提出が必要",r:true},{t:"介護分は別途公募",r:false}],
+    note:"提案募集型。介護分は別途公募。事前提案書の提出が必須。",url:"https://www.pref.kochi.lg.jp/soshiki/060401/"},
+  "福岡県":{name:"介護テクノロジー等定着支援事業費補助金（福岡県）",rate:4/5,cap:null,unitCap:30,special:"意向調査必須",
+    flow:[
+      {p:"entry",date:"4〜5月",label:"意向調査への回答（必須）",desc:"年度初めに実施される意向調査に必ず回答。未回答は原則対象外。",urgent:true},
+      {p:"open",date:"意向調査後",label:"公募開始"},
+      {p:"apply",date:"公募後1ヶ月",label:"申請締切",urgent:true},
+      {p:"decide",date:"8〜9月",label:"交付決定"},
+      {p:"execute",date:"翌年1月",label:"事業完了"},
+      {p:"report",date:"翌年2月",label:"実績報告"}
+    ],
+    cond:[{t:"福岡県内の介護保険指定事業所",r:true},{t:"意向調査への回答が必須（未回答は原則対象外）",r:true},{t:"補助率4/5",r:false}],
+    note:"意向調査（年度初め）への回答が前提条件。未回答は対象外になる可能性。",url:"https://www.pref.fukuoka.lg.jp/contents/kaigo.html"},
+  "佐賀県":{name:"介護テクノロジー等定着支援事業費補助金（佐賀県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.saga.lg.jp/kiji00386025/index.html"},
+  "長崎県":{name:"介護テクノロジー等定着支援事業費補助金（長崎県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.nagasaki.jp/section/kaigo-s/"},
+  "熊本県":{name:"介護テクノロジー等定着支援事業費補助金（熊本県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.kumamoto.jp/soshiki/41/"},
+  "大分県":{name:"介護テクノロジー等定着支援事業費補助金（大分県）",rate:4/5,cap:null,unitCap:30,
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,
+    note:"標準実施（地域医療介護総合確保基金）。",url:"https://www.pref.oita.jp/soshiki/12620/"},
+  "宮崎県":{name:"介護テクノロジー導入支援事業費補助金（宮崎県）",rate:4/5,cap:1000,unitCap:30,special:"パッケージ型",
+    flow:stdFlow("6月","7月末","9月","翌年1月","翌年2月","パッケージ型（複数テクノロジー同時導入）で上限1,000万円。"),
+    cond:[{t:"宮崎県内の介護保険指定事業所",r:true},{t:"パッケージ型で上限1,000万円（補助率4/5）",r:false},{t:"導入後3年間の効果報告",r:true}],
+    note:"パッケージ型上限1,000万円。",url:"https://www.pref.miyazaki.lg.jp/kaigo-seisaku/"},
+  "鹿児島県":{name:"介護テクノロジー等定着支援事業費補助金（鹿児島県）",rate:3/4,cap:null,unitCap:30,special:"台数制限あり",
+    flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月","予算の範囲内での採択。補助台数に制限あり。"),
+    cond:[{t:"鹿児島県内の介護保険指定事業所",r:true},{t:"補助台数に上限制限あり（予算による）",r:true},{t:"導入後3年間の効果報告",r:true}],
+    note:"補助台数制限あり。予算枠に注意して早めの申請を推奨。",url:"https://www.pref.kagoshima.jp/ab14/kenko-fukushi/koresha/kaigo/"},
+  "沖縄県":{name:"介護テクノロジー等定着支援事業費補助金（沖縄県）",rate:3/4,cap:null,unitCap:30,special:"事前協議必要",
+    flow:[
+      {p:"entry",date:"8〜9月",label:"事前協議の実施（必須）",desc:"申請前に県担当者との事前協議が必要。協議なしでは申請不可。",urgent:true},
+      {p:"apply",date:"事前協議後",label:"申請書類提出"},
+      {p:"decide",date:"11月",label:"交付決定"},
+      {p:"execute",date:"翌年2月",label:"事業完了"},
+      {p:"report",date:"翌年3月",label:"実績報告"}
+    ],
+    cond:[{t:"沖縄県内の介護保険指定事業所",r:true},{t:"8〜9月の事前協議が必須（申請前に実施）",r:true},{t:"補助率3/4",r:false}],
+    note:"8〜9月の事前協議が必須。他県より申請タイミングが遅い。",url:"https://www.pref.okinawa.jp/site/kodomo/chojuhukushi/kaigohoken/"}
+};
+
+const medicalUrls={
+  "北海道":"https://www.pref.hokkaido.lg.jp/hf/imu/index.html","青森県":"https://www.pref.aomori.lg.jp/soshiki/kenko/imu/","岩手県":"https://www.pref.iwate.jp/kurashikankyou/iryou/seisaku/index.html","宮城県":"https://www.pref.miyagi.jp/soshiki/imu/","秋田県":"https://www.pref.akita.lg.jp/pages/dir000196","山形県":"https://www.pref.yamagata.jp/ou/imu/","福島県":"https://www.pref.fukushima.lg.jp/site/imu/","茨城県":"https://www.pref.ibaraki.jp/hokenfukushi/imu/","栃木県":"https://www.pref.tochigi.lg.jp/e04/welfare/iryo/seisaku/index.html","群馬県":"https://www.pref.gunma.jp/page/7249.html","埼玉県":"https://www.pref.saitama.lg.jp/a0704/iryo-seisaku.html","千葉県":"https://www.pref.chiba.lg.jp/imu/","東京都":"https://www.hokeniryo.metro.tokyo.lg.jp/iryo/iryo_hoken/","神奈川県":"https://www.pref.kanagawa.jp/div/1040/","新潟県":"https://www.pref.niigata.lg.jp/sec/imu/","富山県":"https://www.pref.toyama.jp/sections/1206/","石川県":"https://www.pref.ishikawa.lg.jp/imu/","福井県":"https://www.pref.fukui.lg.jp/doc/imu/","山梨県":"https://www.pref.yamanashi.jp/imu/","長野県":"https://www.pref.nagano.lg.jp/iryo/","岐阜県":"https://www.pref.gifu.lg.jp/page/7033.html","静岡県":"https://www.pref.shizuoka.jp/kenko/kf-030/","愛知県":"https://www.pref.aichi.jp/soshiki/imu/","三重県":"https://www.pref.mie.lg.jp/IRYOS/index.htm","滋賀県":"https://www.pref.shiga.lg.jp/ippan/kenkouiryouhukushi/imu/","京都府":"https://www.pref.kyoto.jp/imu/index.html","大阪府":"https://www.pref.osaka.lg.jp/imu/","兵庫県":"https://web.pref.hyogo.lg.jp/kf12/","奈良県":"https://www.pref.nara.jp/dd_aspx_menuid-1302.htm","和歌山県":"https://www.pref.wakayama.lg.jp/prefg/040100/","鳥取県":"https://www.pref.tottori.lg.jp/imu/","島根県":"https://www.pref.shimane.lg.jp/medical/imu/","岡山県":"https://www.pref.okayama.jp/page/detail-56300.html","広島県":"https://www.pref.hiroshima.lg.jp/soshiki/55/","山口県":"https://www.pref.yamaguchi.lg.jp/cms/a15200/","徳島県":"https://www.pref.tokushima.lg.jp/jigyoshya/imu/","香川県":"https://www.pref.kagawa.lg.jp/kenko_fukushi/imu/","愛媛県":"https://www.pref.ehime.jp/h20120/imu/index.html","高知県":"https://www.pref.kochi.lg.jp/soshiki/060301/","福岡県":"https://www.pref.fukuoka.lg.jp/contents/imu.html","佐賀県":"https://www.pref.saga.lg.jp/kiji00371120/index.html","長崎県":"https://www.pref.nagasaki.jp/section/imu/","熊本県":"https://www.pref.kumamoto.jp/soshiki/42/","大分県":"https://www.pref.oita.jp/soshiki/12510/","宮崎県":"https://www.pref.miyazaki.lg.jp/imu-seisaku/","鹿児島県":"https://www.pref.kagoshima.jp/ab14/kenko-fukushi/iryo/","沖縄県":"https://www.pref.okinawa.jp/site/hoken/imu/"
+};
+
+const medicalSpecialSet=new Set(["東京都","愛知県"]);
+function getMedD(pref){
+  const isSp=medicalSpecialSet.has(pref);
+  return {
+    name:isSp?`医療機関等経営強化緊急支援事業（${pref}・病床数連動型）`:`医療機関における業務効率化・職場環境改善支援事業補助金（${pref}）`,
+    rate:4/5,cap:8000,isSp,
+    flow:[
+      {p:"entry",date:"4〜6月",label:"意向調査への回答（必須）",desc:`令和8年度に向けた意向調査。未回答は原則補助対象外。${isSp?`${pref}は許可病床数×4万円の特別算定。`:''}`,urgent:true},
+      {p:"open",date:"意向調査後",label:"公募・申請受付開始",desc:"ベースアップ評価料の届出確認後に申請受付。"},
+      {p:"apply",date:"公募後1〜2ヶ月",label:"申請書類提出",desc:"申請書・届出証明・事業計画書・見積書を提出。"},
+      {p:"decide",date:"8〜10月",label:"交付決定",desc:"交付決定前の機器発注・購入は原則不可。"},
+      {p:"execute",date:"翌年1月",label:"機器導入・支払完了"},
+      {p:"report",date:"翌年2月",label:"実績報告・補助金振込（精算払い）"}
+    ],
+    cond:[
+      {t:"2024年4月1日時点で「ベースアップ評価料（病院）」を届け出ていること",r:true},
+      {t:"都道府県が実施する意向調査への事前回答（未回答は原則対象外）",r:true},
+      {t:"交付決定前の機器購入・発注は不可",r:true},
+      {t:"導入後の効果報告・実績報告の提出",r:true},
+      ...(isSp?[{t:`${pref}：許可病床数×4万円（10/10補助）が上限`,r:false}]:[{t:"補助率4/5（上限8,000万円）",r:false}]),
+      {t:"補助金は後払い（精算払い）のため一時立替が必要",r:false}
+    ],
+    note:isSp?`${pref}は許可病床数×4万円（10/10補助）。4/5・上限8,000万円と比較して低い方が適用。`:`補助率4/5（上限8,000万円）。地域医療介護総合確保基金（医療従事者確保分）より交付。`,
+    url:medicalUrls[pref]||null
+  };
+}
+
+const careEligible=["見守りセンサー・離床センサー（1台上限30万円〜100万円）","インカム・ナースコール連携機器","介護記録ソフト・介護支援ソフト（上限250万円）","3点セット同時導入で補助率引き上げ（最大4/5）","業務改善コンサルタント費用（一部都道府県で対象）"];
+const medEligible=["監視カメラ・見守りカメラ・ナースコールシステム","離床センサー・転倒防止センサー","インカム・院内コミュニケーションツール","電子カルテ・医療情報システム（業務効率化目的）","医師の働き方改革に資する機器・システム全般"];
+const careTarget="介護老人福祉施設・介護老人保健施設・認知症対応型共同生活介護（グループホーム）・特定施設入居者生活介護等の介護保険指定事業所";
+const medTarget="2024年4月1日時点で「ベースアップ評価料（病院）」を届け出ている病院・有床診療所";
+
+let selG=null,selP=null;
+
+function buildPrefList(){
+  const c=document.getElementById('pref-list');c.innerHTML='';
+  for(const [reg,prefs] of Object.entries(prefRegions)){
+    const g=document.createElement('div');g.className='region-group';
+    g.innerHTML=`<div class="region-label">${reg}</div><div class="pref-grid"></div>`;
+    c.appendChild(g);
+    prefs.forEach(p=>{
+      const t=document.createElement('div');t.className='pref-tag';t.textContent=p;t.dataset.pref=p;
+      t.onclick=()=>selPref(p,t);g.querySelector('.pref-grid').appendChild(t);
+    });
+  }
+}
+function filterPref(v){document.querySelectorAll('.pref-tag').forEach(t=>t.classList.toggle('hidden',v&&!t.dataset.pref.includes(v)));}
+function selectGenre(g){
+  selG=g;['care','medical'].forEach(x=>document.getElementById('btn-'+x).classList.remove('selected'));
+  document.getElementById('btn-'+g).classList.add('selected');
+  document.getElementById('step2').classList.add('active');
+  document.getElementById('care-inputs').style.display=g==='care'?'block':'none';
+  document.getElementById('medical-inputs').style.display=g==='medical'?'block':'none';
+  chkReady();
+}
+function selPref(p,el){
+  document.querySelectorAll('.pref-tag').forEach(t=>t.classList.remove('selected'));
+  el.classList.add('selected');selP=p;
+  document.getElementById('step3').classList.add('active');chkReady();
+}
+function toggleCheck(cb){cb.closest('.checkbox-item').classList.toggle('checked',cb.checked);}
+function chkReady(){document.getElementById('calc-btn').disabled=!(selG&&selP);}
+function rL(r){if(Array.isArray(r))return`${Math.round(r[0]*100)}%〜${Math.round(r[1]*100)}%`;if(!r)return'要確認';const m={0.5:'1/2',0.75:'3/4',0.8:'4/5',1:'10/10'};return m[r]||`${Math.round(r*100)}%`;}
+function pCls(p){return{open:'p-open',entry:'p-entry',apply:'p-apply',decide:'p-decide',execute:'p-execute',report:'p-report'}[p]||'p-open';}
+
+function buildTL(flow){
+  return flow.map((f,i)=>`
+    <div class="tl-item">
+      <div class="tl-dot ${pCls(f.p)}">${i+1}</div>
+      <div class="tl-body">
+        <div class="tl-date">${f.date||''}${f.urgent?'<span class="tl-urgent">⚡ 期限注意</span>':''}</div>
+        <div class="tl-label">${f.label}</div>
+        ${f.desc?`<div class="tl-desc">${f.desc}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function calculate(){
+  const g=selG,p=selP;let html='';
+  if(g==='care'){
+    const d=careDB[p]||{name:`介護テクノロジー導入支援事業補助金（${p}）`,rate:4/5,cap:null,unitCap:30,flow:stdFlow("6月","7月末","8月","翌年1月","翌年2月"),cond:stdCond,note:"標準実施。詳細は各都道府県の介護保険課へ。",url:null};
+    const cnt=parseInt(document.getElementById('camera-count').value)||0;
+    const up=parseFloat(document.getElementById('unit-price').value)||0;
+    const s3=document.getElementById('chk-3set').checked;
+    let rate=d.rate;
+    if(s3&&!Array.isArray(rate)&&rate<3/4)rate=3/4;
+    const uc=d.unitCap||30,eu=Math.min(up,uc),ec=cnt*eu;
+    let sub=0;
+    if(p==='神奈川県')sub=Math.min(d.cap||100,cnt*up);
+    else if(p==='愛知県')sub=null;
+    else if(Array.isArray(rate))sub=[ec*rate[0],ec*rate[1]];
+    else if(rate)sub=ec*rate;
+    if(Array.isArray(sub)&&d.cap)sub=[Math.min(sub[0],d.cap),Math.min(sub[1],d.cap)];
+    else if(typeof sub==='number'&&d.cap)sub=Math.min(sub,d.cap);
+    const amt=p==='愛知県'?'市町村に要確認':sub===null?'要確認':Array.isArray(sub)?`${sub[0].toFixed(0)}〜${sub[1].toFixed(0)} 万円`:`${sub.toFixed(1)} 万円`;
+    html=buildR({p,gL:'介護施設向け',name:d.name,basedOn:'地域医療介護総合確保基金（介護従事者確保分）',amt,
+      details:[
+        {l:'補助率',v:p==='神奈川県'?'上限固定':p==='愛知県'?'市町村型':rL(rate),s:s3?'3点セット適用':''},
+        {l:'見守り機器台数',v:cnt>0?`${cnt} 台`:'未入力'},
+        {l:'1台上限単価',v:`${uc} 万円`,s:'標準基準'},
+        {l:'対象費用合計',v:cnt>0&&up>0?`${ec.toFixed(0)} 万円`:'未入力',s:'上限単価で計算'},
+        ...(d.cap?[{l:'補助上限額',v:`${d.cap} 万円`}]:[])
+      ],
+      special:d.special,target:careTarget,eligible:careEligible,cond:d.cond,flow:d.flow,note:d.note,
+      window:'各都道府県「介護保険課」または「長寿福祉課」',url:d.url,
+      warns:['補助金は事業完了後の「精算払い（後払い）」が原則。全額を一時的に自己資金または融資で賄う必要があります。','交付決定前の機器発注・購入は原則不可。必ず交付決定通知を受けてから着手してください。',
+        s3?'3点セット（見守りセンサー・インカム・介護ソフト）として補助率を計算しています。':null,
+        d.special==='要事前登録'?'事前登録が必須。公募開始前に必ず登録手続きを行ってください。':null,
+        d.special==='台数制限あり'?'補助台数に上限があります。早めの申請を推奨します。':null,
+        d.special==='意向調査必須'?'意向調査（年度初め）への回答が申請の前提条件です。':null
+      ].filter(Boolean)});
+  }else{
+    const d=getMedD(p);
+    const beds=parseInt(document.getElementById('bed-count').value)||0;
+    const cost=parseFloat(document.getElementById('medical-cost').value)||0;
+    const hb=document.getElementById('chk-baseup').checked;
+    const bs=d.isSp?beds*4:0;
+    let sub=d.isSp?Math.min(Math.min(bs,8000),cost*(4/5)):Math.min(cost*(4/5),8000);
+    const amt=!hb?'申請要件を満たしていません':(beds===0&&cost===0)?'情報を入力してください':`${sub.toFixed(1)} 万円`;
+    html=buildR({p,gL:'医療機関向け',name:d.name,basedOn:'地域医療介護総合確保基金（医療従事者確保分）・厚生労働省補正予算',amt,
+      details:[
+        {l:'補助率',v:'4/5（80%）',s:d.isSp?'病床数上限あり':'上限8,000万円'},
+        {l:'許可病床数',v:beds>0?`${beds} 床`:'未入力'},
+        ...(d.isSp?[{l:'病床上限額',v:beds>0?`${bs.toFixed(0)} 万円`:'未入力',s:'許可病床数×4万円'}]:[]),
+        {l:'導入費用',v:cost>0?`${cost} 万円`:'未入力'},
+        {l:'最大補助上限',v:'8,000 万円',s:'全国共通'}
+      ],
+      special:d.isSp?'病床数連動型':null,target:medTarget,eligible:medEligible,cond:d.cond,flow:d.flow,note:d.note,
+      window:'各都道府県「医務課」または「医療政策課」',url:d.url,
+      warns:['2024年4月1日時点で「ベースアップ評価料」の届出がない場合は原則対象外です。',
+        !hb?'⚠ ベースアップ評価料の届出なしと選択されています。申請要件を満たしていない可能性があります。':null,
+        '意向調査への事前回答がない場合は原則として対象外となります。年度初めに必ず確認してください。',
+        '補助金は後払い（精算払い）のため、一時的な資金手当てが必要です。'
+      ].filter(Boolean)});
+  }
+  const rs=document.getElementById('result-section');
+  rs.style.display='block';
+  document.getElementById('result-content').innerHTML=html;
+  rs.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function buildR({p,gL,name,basedOn,amt,details,special,target,eligible,cond,flow,note,window,url,warns}){
+  const inv=amt.includes('申請要件')||amt.includes('情報を入力')||amt.includes('要確認')||amt.includes('確認');
+  return`
+<div class="result-header">
+  <div class="result-tag">✦ 算出結果</div>
+  <div class="result-pref">${p}　｜　${gL}</div>
+  ${special?`<span class="cond-badge cond-special">⚡ ${special}</span>`:''}
+  <div class="result-amount">${amt}</div>
+  <div class="result-amount-label">${inv?'':'補助金推定額（概算）'}</div>
+</div>
+
+<div class="subsidy-name-card">
+  <div class="subsidy-name-label">📌 補助金の正式名称</div>
+  <div class="subsidy-name-title">${name}</div>
+  <div class="subsidy-name-based">根拠：${basedOn}</div>
+</div>
+
+<div class="detail-grid">
+  ${details.map(d=>`<div class="detail-card"><div class="detail-card-label">${d.l}</div><div class="detail-card-value">${d.v}</div>${d.s?`<div class="detail-card-sub">${d.s}</div>`:''}</div>`).join('')}
+</div>
+
+<div class="timeline-card">
+  <div class="timeline-title">📅 申請フロー・スケジュール（${p}）</div>
+  <div>${buildTL(flow)}</div>
+</div>
+
+<div class="info-section items">
+  <div class="info-section-title">📷 補助対象となる機器・システム</div>
+  <ul class="info-list">${eligible.map(i=>`<li>${i}</li>`).join('')}</ul>
+</div>
+
+<div class="info-section">
+  <div class="info-section-title">🏢 申請対象となる施設・機関</div>
+  <div class="info-section-body">${target}</div>
+</div>
+
+<div class="info-section cond">
+  <div class="info-section-title">✅ 申請条件・要件チェックリスト（${p}）</div>
+  <ul class="info-list">
+    ${cond.map(c=>`<li>${c.t}<span class="${c.r?'tag-req':'tag-opt'}">${c.r?'必須':'任意'}</span></li>`).join('')}
+  </ul>
+</div>
+
+<div class="notes-card">
+  <div class="notes-title">📋 ${p}固有の補助制度メモ</div>
+  <ul class="notes-list"><li>${note}</li></ul>
+  <div class="notes-window">🏛 申請窓口：${window}</div>
+  ${url?`<a class="site-link-btn" href="${url}" target="_blank" rel="noopener noreferrer">🌐 ${p}の公式申請サイトを開く ↗</a>`:`<div class="site-link-none">※ 公式URLは各都道府県窓口にてご確認ください</div>`}
+</div>
+
+<div class="alert-card">⚠️<div>
+  ${warns.map(w=>`${w}<br>`).join('')}
+  <strong>※ この算出結果は概算です。実際の補助額・要件・スケジュールは各都道府県の公式サイトおよび公募要領でご確認ください。</strong>
+</div></div>`;
+}
+
+function resetAll(){
+  selG=null;selP=null;
+  ['care','medical'].forEach(x=>document.getElementById('btn-'+x).classList.remove('selected'));
+  document.querySelectorAll('.pref-tag').forEach(t=>t.classList.remove('selected'));
+  document.getElementById('pref-search').value='';filterPref('');
+  ['camera-count','unit-price','bed-count','medical-cost'].forEach(id=>document.getElementById(id).value='');
+  ['chk-3set','chk-baseup'].forEach(id=>{document.getElementById(id).checked=false;});
+  document.querySelectorAll('.checkbox-item').forEach(el=>el.classList.remove('checked'));
+  document.getElementById('care-inputs').style.display='none';
+  document.getElementById('medical-inputs').style.display='none';
+  document.getElementById('result-section').style.display='none';
+  document.getElementById('calc-btn').disabled=true;
+  document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('step1').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+buildPrefList();
+</script>
+</body>
+</html>
